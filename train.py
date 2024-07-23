@@ -147,11 +147,12 @@ def train_model(train_loader, val_loader, model, processor, device, epochs=10, l
         val_losses.append(avg_val_loss)
         print(f"Average Validation Loss: {avg_val_loss}")
 
-        # Save model checkpoint
-        output_dir = f"./model_checkpoints/epoch_{epoch + 1}"
-        os.makedirs(output_dir, exist_ok=True)
-        model.save_pretrained(output_dir)
-        processor.save_pretrained(output_dir)
+        if epoch % 10 == 0:
+            # Save model checkpoint
+            output_dir = f"./model_checkpoints/epoch_{epoch + 1}"
+            os.makedirs(output_dir, exist_ok=True)
+            model.save_pretrained(output_dir)
+            processor.save_pretrained(output_dir)
 
         # Save losses and update the plot
         save_losses_and_plot(train_losses, val_losses)

@@ -3,15 +3,16 @@
 
 Welcome to the Florence-2-FineTuning repository. This repository contains tools and scripts to fine-tune the Florence-2 model for your custom dataset. It includes functionalities for data loading, model training, and evaluating datasets. The project is maintained by pecako2001.
 
-the model can be seen visited on the huggingface website:
-https://huggingface.co/collections/microsoft/florence-6669f44df0d87d9c3bfb76de
+the model can be seen visited on the huggingface website [Florence-2 Models](https://huggingface.co/collections/microsoft/florence-6669f44df0d87d9c3bfb76de)
+
+A Demo can be found on
+[Florence-2 Demo](https://huggingface.co/spaces/gokaygokay/Florence-2)
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [Arguments](#arguments)
-- [Dataset Preparation](#dataset-preparation)
+- [Dataset Creation](#dataset-creation)
 - [Training](#training)
 - [Evaluation](#evaluation)
 - [Future Work](#future-work)
@@ -73,13 +74,17 @@ To train the model, use the following command:
 python train.py --dataset_folder <path_to_dataset> --split_ratio 0.8 --batch_size 2 --num_workers 0 --epochs 2
 ```
 
-Replace `<path_to_dataset>` with the path to your dataset folder.
+Replace `<path_to_dataset>` with the path to your dataset folder. During training after each epoch an graph is generated and saved as an image inside the `Florence-2-FineTuning` folder.
+
+<div>
+<p style="text-align:center;"><img src="images/loss_graph.png" width="600" center />
+</div>
 
 ### Evaluation
 
-The model can be evaluaded using the predefined pyton script, the task_prompt is the 
+The model can be evaluaded using the predefined pyton script, the task_prompt is the task the model needs to perform there are multiple different tasks: `CAPTION`, `DETAILED_CAPTION`, `MORE_DETAILED_CAPTION` etc.. the rest can be found on the Huggingface space of the Florence-2 model.
 ```sh
-python run_example.py --task_prompt "DocVQA" --text_input "What do you see in this image?" --image_path <path_to_image>
+python val.py --task_prompt "DETAILED_CAPTION" --text_input "What do you see in this image?" --image_path <path_to_image>
 ```
 
 
@@ -98,9 +103,3 @@ Contributions are welcome! Please submit a pull request or open an issue to disc
 ## License
 
 This project is licensed under the MIT License.
-
----
-
-## Download
-
-To download the repository, click [here](https://github.com/pecako2001/Florence-2-FineTuning/archive/refs/heads/main.zip).

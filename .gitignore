@@ -3,6 +3,7 @@ data/
 dataset/
 model_checkpoints/
 losses.csv
+*.zip
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
