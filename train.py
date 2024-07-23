@@ -3,6 +3,7 @@ import json
 import torch
 import torch.multiprocessing as mp
 import argparse
+import csv
 from PIL import Image
 import matplotlib.pyplot as plt
 from transformers import AutoModelForCausalLM, AutoProcessor
@@ -66,6 +67,27 @@ def collate_fn(batch, processor, device):
     inputs = processor(text=list(questions), images=list(images), return_tensors="pt", padding=True).to(device)
     return inputs, answers
 
+# Function to save losses to CSV and plot them
+def save_losses_and_plot(train_losses, val_losses):
+    epochs = range(1, len(train_losses) + 1)
+    
+    # Save to CSV
+    with open('losses.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Epoch', 'Train Loss', 'Validation Loss'])
+        writer.writerows(zip(epochs, train_losses, val_losses))
+    
+    # Plot and save the graph
+    plt.figure()
+    plt.plot(epochs, train_losses, 'bo-', label='Train Loss')
+    plt.plot(epochs, val_losses, 'ro-', label='Validation Loss')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig('loss_graph.png')
+    plt.close()
+
 # Training function
 def train_model(train_loader, val_loader, model, processor, device, epochs=10, lr=1e-6):
     optimizer = AdamW(model.parameters(), lr=lr)
@@ -76,6 +98,9 @@ def train_model(train_loader, val_loader, model, processor, device, epochs=10, l
         num_warmup_steps=0,
         num_training_steps=num_training_steps,
     )
+
+    train_losses = []
+    val_losses = []
 
     for epoch in range(epochs):
         model.train()
@@ -99,6 +124,7 @@ def train_model(train_loader, val_loader, model, processor, device, epochs=10, l
             train_loss += loss.item()
 
         avg_train_loss = train_loss / len(train_loader)
+        train_losses.append(avg_train_loss)
         print(f"Average Training Loss: {avg_train_loss}")
 
         # Validation phase
@@ -118,6 +144,7 @@ def train_model(train_loader, val_loader, model, processor, device, epochs=10, l
                 val_loss += loss.item()
 
         avg_val_loss = val_loss / len(val_loader)
+        val_losses.append(avg_val_loss)
         print(f"Average Validation Loss: {avg_val_loss}")
 
         # Save model checkpoint
@@ -125,6 +152,9 @@ def train_model(train_loader, val_loader, model, processor, device, epochs=10, l
         os.makedirs(output_dir, exist_ok=True)
         model.save_pretrained(output_dir)
         processor.save_pretrained(output_dir)
+
+        # Save losses and update the plot
+        save_losses_and_plot(train_losses, val_losses)
 
 def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0, epochs=2):
     # Load dataset from local files
