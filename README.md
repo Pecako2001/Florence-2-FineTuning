@@ -42,8 +42,19 @@ if you have folder with images the script `createdataset.py` can be used to crea
 ```sh
 python createdataset.py
 ```
-this will create an unique id of your images and put it into the dataset folder. There is a thickbox that can be used to keep your `question`, `question_types` and `answers` the same for each image inside this folder. 
-
+this will create an unique id of your images and put it into the dataset folder. There is a thickbox that can be used to keep your `question`, `question_types` and `answers` the same for each image inside this folder.  The structure of the json looks as followed
+```json
+{
+    "questionId": "337",
+    "question": "what is the date mentioned in this letter?",
+    "question_types": "['handwritten' 'form']",
+    "docId": "279",
+    "ucsf_document_id": "xnbl0037",
+    "ucsf_document_page_no": "1",
+    "answers": "['1/8/93']"
+}
+```
+reference dataset: https://huggingface.co/datasets/HuggingFaceM4/DocumentVQA
 ### Arguments
 
 The training script accepts several arguments to configure the training process. Here are the available arguments:
