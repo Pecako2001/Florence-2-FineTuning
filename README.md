@@ -9,6 +9,7 @@ Florence-2-FineTuning provides tools to fine‑tune Microsoft’s [Florence‑2]
 ## Table of Contents
 - [Installation](#installation)
 - [Dataset Creation](#dataset-creation)
+- [PDF to Image Conversion](#pdf-to-image-conversion)
 - [Training](#training)
 - [Evaluation](#evaluation)
 - [Tutorials](#tutorials)
@@ -56,6 +57,13 @@ For non‑GUI workflows a command line variant is also available:
 python scripts/create_dataset_cli.py --image_folder <path_to_images>
 ```
 The CLI accepts a `--metadata_csv` file with image paths and labels for batch creation.
+
+## PDF to Image Conversion
+Convert scanned documents into images with `pdf_to_images.py`:
+```bash
+python pdf_to_images.py <input.pdf> --output_folder images_out
+```
+Each page of the PDF is saved as an individual image inside the specified folder.
 
 ## Training
 Launch training with:
