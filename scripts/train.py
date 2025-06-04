@@ -1,10 +1,14 @@
 import os
-import torch
-import torch.multiprocessing as mp
 import argparse
 import csv
+import torch
+import torch.multiprocessing as mp
 import matplotlib.pyplot as plt
-from transformers import AutoModelForCausalLM, AutoModelForObjectDetection, AutoProcessor
+from transformers import (
+    AutoModelForCausalLM,
+    AutoModelForObjectDetection,
+    AutoProcessor,
+)
 from torch.utils.data import DataLoader
 
 try:
@@ -16,6 +20,7 @@ from florence.dataset_utils import (
     DocVQADataset,
     ObjectDetectionDataset,
 )
+from florence.config import load_config
 from tqdm import tqdm
 from transformers import AdamW, get_scheduler
 
@@ -147,7 +152,7 @@ def train_model(train_loader, val_loader, model, processor, device, task_type="D
     if use_wandb and wandb is not None:
         wandb.finish()
 
-def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0, epochs=2, task_type="DocVQA", use_wandb=False):
+def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0, epochs=2, task_type="DocVQA", use_wandb=False, lr=1e-6):
     # Load dataset from local files
     data = load_local_dataset(dataset_folder, task_type=task_type)
 
@@ -187,7 +192,7 @@ def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0,
     val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=lambda x: collate(x, processor, device), num_workers=num_workers)
 
     # Train the model
-    train_model(train_loader, val_loader, model, processor, device, task_type=task_type, epochs=epochs, use_wandb=use_wandb)
+    train_model(train_loader, val_loader, model, processor, device, task_type=task_type, epochs=epochs, use_wandb=use_wandb, lr=lr)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a Florence-2 model.")
@@ -196,8 +201,25 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=2, help="Batch size for training.")
     parser.add_argument("--num_workers", type=int, default=0, help="Number of workers for data loading.")
     parser.add_argument("--epochs", type=int, default=2, help="Number of training epochs.")
+    parser.add_argument("--lr", type=float, default=1e-6, help="Learning rate.")
+    parser.add_argument("--config", type=str, default=None, help="Path to YAML/JSON config file.")
     parser.add_argument("--task_type", type=str, choices=["DocVQA", "ObjectDetection"], default="DocVQA", help="Task type for fine-tuning.")
     parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging.")
 
     args = parser.parse_args()
-    main(dataset_folder=args.dataset_folder, split_ratio=args.split_ratio, batch_size=args.batch_size, num_workers=args.num_workers, epochs=args.epochs, task_type=args.task_type, use_wandb=args.wandb)
+
+    if args.config:
+        cfg = load_config(args.config)
+    else:
+        cfg = {}
+
+    main(
+        dataset_folder=cfg.get("dataset_folder", args.dataset_folder),
+        split_ratio=cfg.get("split_ratio", args.split_ratio),
+        batch_size=cfg.get("batch_size", args.batch_size),
+        num_workers=cfg.get("num_workers", args.num_workers),
+        epochs=cfg.get("epochs", args.epochs),
+        lr=cfg.get("lr", args.lr),
+        use_wandb=cfg.get("use_wandb", args.wandb),
+        task_type=cfg.get("task_type", args.task_type),
+    )
