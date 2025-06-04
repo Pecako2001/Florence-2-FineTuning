@@ -9,6 +9,7 @@ Florence-2-FineTuning provides tools to fine‑tune Microsoft’s [Florence‑2]
 ## Table of Contents
 - [Installation](#installation)
 - [Dataset Creation](#dataset-creation)
+- [PDF to Image Conversion](#pdf-to-image-conversion)
 - [Training](#training)
 - [Evaluation](#evaluation)
 - [Repository Structure](#repository-structure)
@@ -49,6 +50,13 @@ It assigns a unique ID to each image and stores the corresponding metadata in th
 }
 ```
 You can use [DocumentVQA](https://huggingface.co/datasets/HuggingFaceM4/DocumentVQA) as a reference dataset.
+
+## PDF to Image Conversion
+Convert scanned documents into images with `pdf_to_images.py`:
+```bash
+python pdf_to_images.py <input.pdf> --output_folder images_out
+```
+Each page of the PDF is saved as an individual image inside the specified folder.
 
 ## Training
 Launch training with:
