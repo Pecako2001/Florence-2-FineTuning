@@ -10,6 +10,8 @@ from dataset_utils import (
     load_local_dataset,
     DocVQADataset,
     ObjectDetectionDataset,
+    cache_preprocessed_dataset,
+    CachedDataset,
 )
 from tqdm import tqdm
 from transformers import AdamW, get_scheduler
@@ -29,6 +31,13 @@ def collate_fn_detection(batch, processor, device):
     images, targets = zip(*batch)
     inputs = processor(images=list(images), annotations=list(targets), return_tensors="pt").to(device)
     return inputs
+
+# Collate function for cached datasets
+def collate_fn_cached(batch, device):
+    input_ids = torch.stack([item["input_ids"] for item in batch]).to(device)
+    pixel_values = torch.stack([item["pixel_values"] for item in batch]).to(device)
+    labels = torch.stack([item["labels"] for item in batch]).to(device)
+    return {"input_ids": input_ids, "pixel_values": pixel_values}, labels
 
 # Function to save losses to CSV and plot them
 def save_losses_and_plot(train_losses, val_losses):
@@ -73,8 +82,11 @@ def train_model(train_loader, val_loader, model, processor, device, task_type="D
                 inputs, answers = batch
                 input_ids = inputs["input_ids"]
                 pixel_values = inputs["pixel_values"]
-                answers = [str(answer) for answer in answers]
-                labels = processor.tokenizer(text=answers, return_tensors="pt", padding=True, return_token_type_ids=False).input_ids.to(device)
+                if isinstance(answers, torch.Tensor):
+                    labels = answers
+                else:
+                    answers = [str(answer) for answer in answers]
+                    labels = processor.tokenizer(text=answers, return_tensors="pt", padding=True, return_token_type_ids=False).input_ids.to(device)
                 outputs = model(input_ids=input_ids, pixel_values=pixel_values, labels=labels)
             else:
                 inputs = batch
@@ -101,8 +113,11 @@ def train_model(train_loader, val_loader, model, processor, device, task_type="D
                     inputs, answers = batch
                     input_ids = inputs["input_ids"]
                     pixel_values = inputs["pixel_values"]
-                    answers = [str(answer) for answer in answers]
-                    labels = processor.tokenizer(text=answers, return_tensors="pt", padding=True, return_token_type_ids=False).input_ids.to(device)
+                    if isinstance(answers, torch.Tensor):
+                        labels = answers
+                    else:
+                        answers = [str(answer) for answer in answers]
+                        labels = processor.tokenizer(text=answers, return_tensors="pt", padding=True, return_token_type_ids=False).input_ids.to(device)
                     outputs = model(input_ids=input_ids, pixel_values=pixel_values, labels=labels)
                 else:
                     inputs = batch
@@ -125,7 +140,7 @@ def train_model(train_loader, val_loader, model, processor, device, task_type="D
         # Save losses and update the plot
         save_losses_and_plot(train_losses, val_losses)
 
-def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0, epochs=2, task_type="DocVQA"):
+def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0, epochs=2, task_type="DocVQA", cache_dir=None):
     # Load dataset from local files
     data = load_local_dataset(dataset_folder, task_type=task_type)
 
@@ -152,14 +167,25 @@ def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0,
     processor = AutoProcessor.from_pretrained("microsoft/Florence-2-base-ft", trust_remote_code=True, revision='refs/pr/6')
 
     # Create datasets and dataloaders
-    if task_type == "ObjectDetection":
-        train_dataset = ObjectDetectionDataset(train_data)
-        val_dataset = ObjectDetectionDataset(val_data)
-        collate = collate_fn_detection
+    if cache_dir:
+        train_cache = os.path.join(cache_dir, "train")
+        val_cache = os.path.join(cache_dir, "val")
+        if not (os.path.exists(train_cache) and os.listdir(train_cache)):
+            cache_preprocessed_dataset(train_data, processor, train_cache, task_type)
+        if not (os.path.exists(val_cache) and os.listdir(val_cache)):
+            cache_preprocessed_dataset(val_data, processor, val_cache, task_type)
+        train_dataset = CachedDataset(train_cache)
+        val_dataset = CachedDataset(val_cache)
+        collate = lambda batch, proc, dev: collate_fn_cached(batch, dev)
     else:
-        train_dataset = DocVQADataset(train_data)
-        val_dataset = DocVQADataset(val_data)
-        collate = collate_fn
+        if task_type == "ObjectDetection":
+            train_dataset = ObjectDetectionDataset(train_data)
+            val_dataset = ObjectDetectionDataset(val_data)
+            collate = collate_fn_detection
+        else:
+            train_dataset = DocVQADataset(train_data)
+            val_dataset = DocVQADataset(val_data)
+            collate = collate_fn
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=lambda x: collate(x, processor, device), num_workers=num_workers, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=lambda x: collate(x, processor, device), num_workers=num_workers)
@@ -175,6 +201,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=0, help="Number of workers for data loading.")
     parser.add_argument("--epochs", type=int, default=2, help="Number of training epochs.")
     parser.add_argument("--task_type", type=str, choices=["DocVQA", "ObjectDetection"], default="DocVQA", help="Task type for fine-tuning.")
+    parser.add_argument("--cache_dir", type=str, default=None, help="Directory to store cached preprocessed data.")
 
     args = parser.parse_args()
-    main(dataset_folder=args.dataset_folder, split_ratio=args.split_ratio, batch_size=args.batch_size, num_workers=args.num_workers, epochs=args.epochs, task_type=args.task_type)
+    main(dataset_folder=args.dataset_folder, split_ratio=args.split_ratio, batch_size=args.batch_size, num_workers=args.num_workers, epochs=args.epochs, task_type=args.task_type, cache_dir=args.cache_dir)

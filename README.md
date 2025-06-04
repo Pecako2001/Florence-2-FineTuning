@@ -55,6 +55,7 @@ Launch training with:
 python train.py --dataset_folder <path_to_dataset> --split_ratio 0.8 --batch_size 2 --num_workers 0 --epochs 2
 ```
 Replace `<path_to_dataset>` with your dataset path. After each epoch a loss graph is saved to the repository root.
+To reuse preprocessed features across runs, supply `--cache_dir <cache>`.
 <div align="center">
   <img src="images/loss_graph.png" width="600" />
 </div>
@@ -70,6 +71,7 @@ python val.py --task_prompt "DETAILED_CAPTION" --text_input "What do you see in 
 - Updated documentation structure for clarity.
 - Added usage examples for `createdataset.py`, `train.py` and `val.py`.
 - Established an extension point for future **object detection** capabilities.
+- Introduced dataset caching utilities to speed up repeated training.
 
 ## Future Work
 - **Evaluation Script**: automated benchmark utilities.
