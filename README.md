@@ -73,6 +73,7 @@ python train.py --config configs/train_example.yaml
 Replace `<path_to_dataset>` with your dataset path. After each epoch a loss graph is saved to the repository root.
 To log metrics to [Weights & Biases](https://wandb.ai), add the `--wandb` flag and install the `wandb` package.
 You can still override any option on the command line. After each epoch a loss graph is saved to the repository root.
+To reuse preprocessed features across runs, supply `--cache_dir <cache>`.
 <div align="center">
   <img src="images/loss_graph.png" width="600" />
 </div>
@@ -104,6 +105,7 @@ The project now follows a modular layout:
 - Updated documentation structure for clarity.
 - Added usage examples for `createdataset.py`, `train.py` and `val.py`.
 - Established an extension point for future **object detection** capabilities.
+- Introduced dataset caching utilities to speed up repeated training.
 
 ## Future Work
 - **Evaluation Script**: automated benchmark utilities.
