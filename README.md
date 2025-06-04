@@ -11,6 +11,7 @@ Florence-2-FineTuning provides tools to fine‑tune Microsoft’s [Florence‑2]
 - [Dataset Creation](#dataset-creation)
 - [Training](#training)
 - [Evaluation](#evaluation)
+- [Tutorials](#tutorials)
 - [Repository Structure](#repository-structure)
 - [New Contributions](#new-contributions)
 - [Future Work](#future-work)
@@ -66,6 +67,9 @@ Evaluate a trained model using `val.py`:
 python val.py --task_prompt "DETAILED_CAPTION" --text_input "What do you see in this image?" --image_path <path_to_image> --model_dir <model_directory>
 ```
 `task_prompt` selects the Florence‑2 task (e.g., `CAPTION`, `DETAILED_CAPTION`). See the Hugging Face model page for additional prompts.
+
+## Tutorials
+Step‑by‑step Jupyter notebooks in the `notebooks/` folder show how to create a dataset, train a model and run inference for quick experimentation.
 
 ## Repository Structure
 The project now follows a modular layout:
