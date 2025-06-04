@@ -75,8 +75,12 @@ python val.py --task_prompt "DETAILED_CAPTION" --text_input "What do you see in 
 ```
 `task_prompt` selects the Florence‑2 task (e.g., `CAPTION`, `DETAILED_CAPTION`). See the Hugging Face model page for additional prompts.
 
-## Tutorials
-Step‑by‑step Jupyter notebooks in the `notebooks/` folder show how to create a dataset, train a model and run inference for quick experimentation.
+## Tutorial Notebooks
+Ready-to-run notebooks in the `notebooks/` folder walk through the full workflow:
+
+1. **dataset_creation.ipynb** – label images and build a dataset.
+2. **training.ipynb** – fine-tune Florence-2 using the generated data.
+3. **inference.ipynb** – run the trained model on new images.
 
 ## Repository Structure
 The project now follows a modular layout:
