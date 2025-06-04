@@ -1,8 +1,7 @@
 import os
 import json
-import random
-from collections import defaultdict
 from PIL import Image
+import torch
 try:
     from torch.utils.data import Dataset
 except Exception:  # pragma: no cover - fallback when torch isn't available
@@ -71,86 +70,90 @@ class ObjectDetectionDataset(Dataset):
         return image, {"boxes": example['boxes'], "labels": example['labels']}
 
 
-def kfold_split(data, k, shuffle=True, seed=0):
-    """Split a dataset into ``k`` folds for cross validation.
+def cache_preprocessed_dataset(data, processor, cache_dir, task_type="DocVQA"):
+    """Preprocess a dataset and save the features to ``cache_dir``.
 
     Parameters
     ----------
-    data : Sequence
-        Iterable dataset to split.
-    k : int
-        Number of folds to create.
-    shuffle : bool, optional
-        Whether to shuffle the data before splitting, by default ``True``.
-    seed : int, optional
-        Random seed used when ``shuffle`` is ``True``.
+    data : list
+        Loaded dataset entries as returned by :func:`load_local_dataset`.
+    processor : object
+        Processor with ``tokenizer`` and image processing methods.
+    cache_dir : str
+        Directory where cached ``.pt`` files will be stored.
+    task_type : str, optional
+        Either ``"DocVQA"`` or ``"ObjectDetection"``. Defaults to ``"DocVQA"``.
 
     Returns
     -------
-    list of tuples
-        A list containing ``(train, val)`` pairs for each fold.
+    list
+        A list of dictionaries containing preprocessed tensors.
     """
+    os.makedirs(cache_dir, exist_ok=True)
+    cached_data = []
+    for i, example in enumerate(data):
+        if task_type == "DocVQA":
+            question = "<DocVQA>" + example["question"]
+            answers = example.get("answers")
+            if answers is None:
+                answers = [""]
+            elif isinstance(answers, dict):
+                answers = list(answers.values())
+            elif not isinstance(answers, list):
+                answers = [str(answers)]
+            first_answer = answers[0] if answers else ""
+            image = example["image"]
+            if image and image.mode != "RGB":
+                image = image.convert("RGB")
+            enc = processor(
+                text=[question],
+                images=[image],
+                return_tensors="pt",
+                padding="max_length",
+                max_length=getattr(processor.tokenizer, "model_max_length", None),
+            )
+            labels = processor.tokenizer(
+                text=[first_answer],
+                return_tensors="pt",
+                padding="max_length",
+                max_length=getattr(processor.tokenizer, "model_max_length", None),
+                return_token_type_ids=False,
+            ).input_ids
+            item = {
+                "input_ids": enc["input_ids"].squeeze(0),
+                "pixel_values": enc["pixel_values"].squeeze(0),
+                "labels": labels.squeeze(0),
+            }
+        else:
+            image = example["image"]
+            if image and image.mode != "RGB":
+                image = image.convert("RGB")
+            target = {"boxes": example["boxes"], "labels": example["labels"]}
+            enc = processor(images=[image], annotations=[target], return_tensors="pt")
+            item = {k: v.squeeze(0) if hasattr(v, "squeeze") else v for k, v in enc.items()}
 
-    if k <= 1:
-        raise ValueError("k must be greater than 1")
+        file_path = os.path.join(cache_dir, f"{i}.pt")
+        torch.save(item, file_path)
+        cached_data.append(item)
 
-    indices = list(range(len(data)))
-    rng = random.Random(seed)
-    if shuffle:
-        rng.shuffle(indices)
-
-    fold_size = len(data) // k
-    remainder = len(data) % k
-    folds = []
-    start = 0
-    for i in range(k):
-        extra = 1 if i < remainder else 0
-        end = start + fold_size + extra
-        val_idx = indices[start:end]
-        train_idx = indices[:start] + indices[end:]
-        train = [data[j] for j in train_idx]
-        val = [data[j] for j in val_idx]
-        folds.append((train, val))
-        start = end
-    return folds
+    return cached_data
 
 
-def stratified_split(data, labels, test_ratio=0.2, seed=0):
-    """Perform a stratified train/test split.
+def load_cached_dataset(cache_dir):
+    """Load preprocessed tensors from ``cache_dir``."""
+    files = sorted(f for f in os.listdir(cache_dir) if f.endswith(".pt"))
+    return [torch.load(os.path.join(cache_dir, f)) for f in files]
 
-    Parameters
-    ----------
-    data : Sequence
-        Dataset items.
-    labels : Sequence
-        Label corresponding to each item in ``data``.
-    test_ratio : float, optional
-        Fraction of each class to include in the test set, by default ``0.2``.
-    seed : int, optional
-        Random seed for shuffling.
 
-    Returns
-    -------
-    tuple of lists
-        ``(train_data, test_data)`` maintaining label proportions.
-    """
+class CachedDataset(Dataset):
+    """Dataset that serves items from cached tensors."""
 
-    if len(data) != len(labels):
-        raise ValueError("data and labels must have the same length")
-    if not 0 < test_ratio < 1:
-        raise ValueError("test_ratio must be between 0 and 1")
+    def __init__(self, cache_dir):
+        self.data = load_cached_dataset(cache_dir)
 
-    label_to_indices = defaultdict(list)
-    for idx, label in enumerate(labels):
-        label_to_indices[label].append(idx)
+    def __len__(self):
+        return len(self.data)
 
-    rng = random.Random(seed)
-    test_indices = []
-    for inds in label_to_indices.values():
-        rng.shuffle(inds)
-        n_test = int(len(inds) * test_ratio)
-        test_indices.extend(inds[:n_test])
+    def __getitem__(self, idx):
+        return self.data[idx]
 
-    test_set = [data[i] for i in test_indices]
-    train_set = [data[i] for i in range(len(data)) if i not in set(test_indices)]
-    return train_set, test_set
