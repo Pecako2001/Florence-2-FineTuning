@@ -112,6 +112,10 @@ python val.py --task_prompt "DETAILED_CAPTION" --text_input "What do you see in 
 
 Contributions are welcome! Please submit a pull request or open an issue to discuss potential changes or improvements.
 
+## GitAds Sponsored
+
+[![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=pecako2001/florence-2-finetuning@github)](https://gitads.dev/v1/ad-track?source=pecako2001/florence-2-finetuning@github)
+
 ## License
 
 This project is licensed under the MIT License.
