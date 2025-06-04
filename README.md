@@ -51,11 +51,11 @@ It assigns a unique ID to each image and stores the corresponding metadata in th
 You can use [DocumentVQA](https://huggingface.co/datasets/HuggingFaceM4/DocumentVQA) as a reference dataset.
 
 ## Training
-Launch training with:
+Launch training with either command line options or a YAML/JSON config:
 ```bash
-python train.py --dataset_folder <path_to_dataset> --split_ratio 0.8 --batch_size 2 --num_workers 0 --epochs 2
+python train.py --config configs/train_example.yaml
 ```
-Replace `<path_to_dataset>` with your dataset path. After each epoch a loss graph is saved to the repository root.
+You can still override any option on the command line. After each epoch a loss graph is saved to the repository root.
 <div align="center">
   <img src="images/loss_graph.png" width="600" />
 </div>
