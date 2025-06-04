@@ -6,7 +6,7 @@ import csv
 import matplotlib.pyplot as plt
 from transformers import AutoModelForCausalLM, AutoModelForObjectDetection, AutoProcessor
 from torch.utils.data import DataLoader
-from dataset_utils import (
+from florence.dataset_utils import (
     load_local_dataset,
     DocVQADataset,
     ObjectDetectionDataset,
