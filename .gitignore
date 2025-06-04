@@ -136,4 +136,9 @@ dmypy.json
 cython_debug/
 
 # Ignore VSCode settings
-.vscode/
+.vscode/# frontend
+frontend/node_modules/
+# data and models generated
+data/
+models/
+__pycache__/
