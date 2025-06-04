@@ -6,6 +6,11 @@ import csv
 import matplotlib.pyplot as plt
 from transformers import AutoModelForCausalLM, AutoModelForObjectDetection, AutoProcessor
 from torch.utils.data import DataLoader
+
+try:
+    import wandb
+except Exception:  # pragma: no cover - wandb is optional
+    wandb = None
 from florence.dataset_utils import (
     load_local_dataset,
     DocVQADataset,
@@ -52,7 +57,13 @@ def save_losses_and_plot(train_losses, val_losses):
     plt.close()
 
 # Training function
-def train_model(train_loader, val_loader, model, processor, device, task_type="DocVQA", epochs=10, lr=1e-6):
+def train_model(train_loader, val_loader, model, processor, device, task_type="DocVQA", epochs=10, lr=1e-6, use_wandb=False, project="florence-training"):
+    if use_wandb and wandb is not None:
+        wandb.init(project=project)
+        wandb.watch(model, log="all")
+    elif use_wandb and wandb is None:
+        raise ImportError("wandb must be installed to use logging")
+
     optimizer = AdamW(model.parameters(), lr=lr)
     num_training_steps = epochs * len(train_loader)
     lr_scheduler = get_scheduler(
@@ -91,6 +102,8 @@ def train_model(train_loader, val_loader, model, processor, device, task_type="D
         avg_train_loss = train_loss / len(train_loader)
         train_losses.append(avg_train_loss)
         print(f"Average Training Loss: {avg_train_loss}")
+        if use_wandb and wandb is not None:
+            wandb.log({"train_loss": avg_train_loss, "epoch": epoch + 1})
 
         # Validation phase
         model.eval()
@@ -114,6 +127,8 @@ def train_model(train_loader, val_loader, model, processor, device, task_type="D
         avg_val_loss = val_loss / len(val_loader)
         val_losses.append(avg_val_loss)
         print(f"Average Validation Loss: {avg_val_loss}")
+        if use_wandb and wandb is not None:
+            wandb.log({"val_loss": avg_val_loss, "epoch": epoch + 1})
 
         if epoch % 10 == 0:
             # Save model checkpoint
@@ -121,11 +136,18 @@ def train_model(train_loader, val_loader, model, processor, device, task_type="D
             os.makedirs(output_dir, exist_ok=True)
             model.save_pretrained(output_dir)
             processor.save_pretrained(output_dir)
+            if use_wandb and wandb is not None:
+                wandb.save(os.path.join(output_dir, "*"))
 
         # Save losses and update the plot
         save_losses_and_plot(train_losses, val_losses)
+        if use_wandb and wandb is not None:
+            wandb.log({"loss_plot": wandb.Image("loss_graph.png")})
 
-def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0, epochs=2, task_type="DocVQA"):
+    if use_wandb and wandb is not None:
+        wandb.finish()
+
+def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0, epochs=2, task_type="DocVQA", use_wandb=False):
     # Load dataset from local files
     data = load_local_dataset(dataset_folder, task_type=task_type)
 
@@ -165,7 +187,7 @@ def main(dataset_folder='dataset', split_ratio=0.8, batch_size=2, num_workers=0,
     val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=lambda x: collate(x, processor, device), num_workers=num_workers)
 
     # Train the model
-    train_model(train_loader, val_loader, model, processor, device, task_type=task_type, epochs=epochs)
+    train_model(train_loader, val_loader, model, processor, device, task_type=task_type, epochs=epochs, use_wandb=use_wandb)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a Florence-2 model.")
@@ -175,6 +197,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=0, help="Number of workers for data loading.")
     parser.add_argument("--epochs", type=int, default=2, help="Number of training epochs.")
     parser.add_argument("--task_type", type=str, choices=["DocVQA", "ObjectDetection"], default="DocVQA", help="Task type for fine-tuning.")
+    parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging.")
 
     args = parser.parse_args()
-    main(dataset_folder=args.dataset_folder, split_ratio=args.split_ratio, batch_size=args.batch_size, num_workers=args.num_workers, epochs=args.epochs, task_type=args.task_type)
+    main(dataset_folder=args.dataset_folder, split_ratio=args.split_ratio, batch_size=args.batch_size, num_workers=args.num_workers, epochs=args.epochs, task_type=args.task_type, use_wandb=args.wandb)
