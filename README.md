@@ -50,6 +50,12 @@ It assigns a unique ID to each image and stores the corresponding metadata in th
 ```
 You can use [DocumentVQA](https://huggingface.co/datasets/HuggingFaceM4/DocumentVQA) as a reference dataset.
 
+For non‑GUI workflows a command line variant is also available:
+```bash
+python scripts/create_dataset_cli.py --image_folder <path_to_images>
+```
+The CLI accepts a `--metadata_csv` file with image paths and labels for batch creation.
+
 ## Training
 Launch training with:
 ```bash
