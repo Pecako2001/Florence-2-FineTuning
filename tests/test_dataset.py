@@ -7,6 +7,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from florence.dataset_utils import (
     load_local_dataset,
     ObjectDetectionDataset,
+    ClassificationDataset,
+    SegmentationDataset,
     kfold_split,
     stratified_split,
 )
@@ -23,6 +25,30 @@ def test_object_detection_dataset(tmp_path):
     image, target = dataset[0]
     assert target["boxes"][0] == [1, 2, 3, 4]
     assert target["labels"][0] == "cat"
+
+
+def test_classification_dataset(tmp_path):
+    img_path = tmp_path / "1.png"
+    Image.new("RGB", (5, 5), color="white").save(img_path)
+    with open(tmp_path / "1.json", "w") as f:
+        json.dump({"label": 1}, f)
+    data = load_local_dataset(str(tmp_path), task_type="Classification")
+    dataset = ClassificationDataset(data)
+    image, label = dataset[0]
+    assert label == 1
+
+
+def test_segmentation_dataset(tmp_path):
+    img_path = tmp_path / "1.png"
+    mask_path = tmp_path / "1_mask.png"
+    Image.new("RGB", (5, 5), color="white").save(img_path)
+    Image.new("L", (5, 5), color=0).save(mask_path)
+    with open(tmp_path / "1.json", "w") as f:
+        json.dump({}, f)
+    data = load_local_dataset(str(tmp_path), task_type="Segmentation")
+    dataset = SegmentationDataset(data)
+    image, mask = dataset[0]
+    assert mask.size == (5, 5)
 
 
 def test_kfold_split():

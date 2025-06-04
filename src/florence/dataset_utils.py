@@ -12,6 +12,21 @@ except Exception:  # pragma: no cover - fallback when torch isn't available
 
 
 def load_local_dataset(folder_name, task_type="DocVQA"):
+    """Load a dataset stored as ``JSON``/``PNG`` pairs.
+
+    Parameters
+    ----------
+    folder_name : str
+        Directory containing ``*.json`` annotation files.
+    task_type : str, optional
+        Task type, one of ``DocVQA``, ``ObjectDetection``, ``Classification`` or
+        ``Segmentation``.
+
+    Returns
+    -------
+    list of dict
+        Each entry contains the image and task specific fields.
+    """
     data = []
     for file_name in os.listdir(folder_name):
         if not file_name.endswith('.json'):
@@ -21,11 +36,19 @@ def load_local_dataset(folder_name, task_type="DocVQA"):
         base_name = os.path.splitext(file_name)[0]
         image_path = os.path.join(folder_name, f"{base_name}.png")
         image = Image.open(image_path).convert("RGB") if os.path.exists(image_path) else None
+
         if task_type == "ObjectDetection":
             objects = entry.get('objects', [])
             boxes = [obj.get('bbox') for obj in objects]
             labels = [obj.get('label') for obj in objects]
             data.append({'image': image, 'boxes': boxes, 'labels': labels})
+        elif task_type == "Classification":
+            label = entry.get('label')
+            data.append({'image': image, 'label': label})
+        elif task_type == "Segmentation":
+            mask_path = os.path.join(folder_name, f"{base_name}_mask.png")
+            mask = Image.open(mask_path) if os.path.exists(mask_path) else None
+            data.append({'image': image, 'mask': mask})
         else:
             entry['image'] = image
             data.append(entry)
@@ -69,6 +92,42 @@ class ObjectDetectionDataset(Dataset):
         if image and image.mode != "RGB":
             image = image.convert("RGB")
         return image, {"boxes": example['boxes'], "labels": example['labels']}
+
+
+class ClassificationDataset(Dataset):
+    """Simple image classification dataset."""
+
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        example = self.data[idx]
+        image = example['image']
+        if image and image.mode != "RGB":
+            image = image.convert("RGB")
+        label = example.get('label')
+        return image, label
+
+
+class SegmentationDataset(Dataset):
+    """Image segmentation dataset returning an image and mask."""
+
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        example = self.data[idx]
+        image = example['image']
+        mask = example.get('mask')
+        if image and image.mode != "RGB":
+            image = image.convert("RGB")
+        return image, mask
 
 
 def kfold_split(data, k, shuffle=True, seed=0):

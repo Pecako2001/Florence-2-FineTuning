@@ -74,6 +74,11 @@ python val.py --task_prompt "DETAILED_CAPTION" --text_input "What do you see in 
 ```
 `task_prompt` selects the Florence‑2 task (e.g., `CAPTION`, `DETAILED_CAPTION`). See the Hugging Face model page for additional prompts.
 
+Two utility metrics are provided for other tasks:
+- **Accuracy** for classification via `florence.metrics.accuracy`.
+- **IoU** for segmentation via `florence.metrics.iou_score`.
+Example scripts `example_classification.py` and `example_segmentation.py` demonstrate their use.
+
 ## Tutorials
 Step‑by‑step Jupyter notebooks in the `notebooks/` folder show how to create a dataset, train a model and run inference for quick experimentation.
 
@@ -90,6 +95,8 @@ The project now follows a modular layout:
 - Updated documentation structure for clarity.
 - Added usage examples for `createdataset.py`, `train.py` and `val.py`.
 - Established an extension point for future **object detection** capabilities.
+- Introduced `accuracy` and `iou_score` metrics with example scripts for
+  classification and segmentation.
 
 ## Future Work
 - **Evaluation Script**: automated benchmark utilities.
