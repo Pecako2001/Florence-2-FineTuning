@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 from PIL import Image
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from dataset_utils import load_local_dataset, ObjectDetectionDataset
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from florence.dataset_utils import load_local_dataset, ObjectDetectionDataset
 
 def test_object_detection_dataset(tmp_path):
     img_path = tmp_path / "1.png"
