@@ -63,6 +63,7 @@ Launch training with:
 python train.py --dataset_folder <path_to_dataset> --split_ratio 0.8 --batch_size 2 --num_workers 0 --epochs 2
 ```
 Replace `<path_to_dataset>` with your dataset path. After each epoch a loss graph is saved to the repository root.
+To log metrics to [Weights & Biases](https://wandb.ai), add the `--wandb` flag and install the `wandb` package.
 <div align="center">
   <img src="images/loss_graph.png" width="600" />
 </div>
